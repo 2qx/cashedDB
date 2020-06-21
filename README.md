@@ -33,8 +33,3 @@ The following code gets the first 10 block headers, stores them in bulk, then ge
         
 
 [Mocha browser tests](test/) provide some working examples.
-
-## Sample App
-
-[A Block Explorer](app/) is available in the app directory. 
-
