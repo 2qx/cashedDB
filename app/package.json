@@ -15,11 +15,11 @@
     "grpc-bchrpc-browser": "file:../../grpc-bchrpc-browser",
     "react": "^16.9.0",
     "react-dom": "^16.9.0",
-    "react-static": "^7.2.0",
-    "react-static-plugin-reach-router": "^7.2.0",
-    "react-static-plugin-sitemap": "^7.2.0",
-    "react-static-plugin-source-filesystem": "^7.2.0",
-    "react-static-plugin-typescript": "^7.2.0"
+    "react-static": "^7.3.0",
+    "react-static-plugin-reach-router": "^7.3.0",
+    "react-static-plugin-sitemap": "^7.3.0",
+    "react-static-plugin-source-filesystem": "^7.3.0",
+    "react-static-plugin-typescript": "^7.3.0"
   },
   "devDependencies": {
     "@types/node": "^12.7.2",

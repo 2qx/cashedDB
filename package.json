@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "nyc mocha --timeout=30000 '*.spec.js'",
+    "test": "nyc mocha --timeout=3000 '*.spec.js'",
     "build": "tsc && mkdirp dist && browserify index.js --standalone cashedDB > dist/cashedDB.js && browserify index.spec.js --standalone test > test/index.spec.mjs",
     "test:browser": "live-server --port=9000 test/"
   },
