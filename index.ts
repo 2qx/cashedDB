@@ -1,9 +1,8 @@
-export { CashedDB } from "./src/cashedDB";
+export {
+    db,
+    CashedDB,
+    Block,
+    Txn,
+    Address
+} from "./src/db";
 export { CashedService } from "./src/cashedService";
-export { 
-    BlockDocument,
-    BlockDocFromObject, 
-    CashedDatabase, 
-    DatabaseCollections,
-    TransactionDocument,
-    TransactionDocFromObject} from "./src/cashedSchema"
