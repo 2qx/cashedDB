@@ -5,7 +5,7 @@ type Checkpoint = {
 }
 
 
-const checkpoints:Checkpoint[] = [
+export const checkpoints:Checkpoint[] = [
     { height: 1, hashHex: "00000000839a8e6886ab5951d76f411475428afc90947ee320161bbf18eb6048" },
     { height: 11111, hashHex: "0000000069e244f73d78e8fd29ba2fd2ed618bd6fa2ee92559f542fdb26e7c1d" },
     { height: 33333, hashHex: "000000002dd5588a74784eaa7ab0507a18ad16a236e7b1ce69f00d7ddfb5d0a6" },
@@ -36,6 +36,3 @@ const checkpoints:Checkpoint[] = [
     { height: 635259, hashHex: "00000000000000000033dfef1fc2d6a5d5520b078c55193a9bf498c5b27530f7" }
 ]
 
-export {
-    checkpoints
-}

@@ -12,7 +12,7 @@ import Dexie from 'dexie';
 *    Block
 */
 
-export class CashedDB extends Dexie {
+export default class CashedDB extends Dexie {
 
     block!: Dexie.Table<Block, number>;
     txn!: Dexie.Table<ConfirmedTransaction, number>;
@@ -73,29 +73,29 @@ export class CashedDB extends Dexie {
 
     async loadNavigationProperties() {
         [this.txn, this.mempool] = await Promise.all([
-            db.txn.where('inputsList.[].address').equals(this.address).or('outputsList.[].address').equals(this.address).toArray(),
-            db.mempool.where('inputsList.[].address').equals(this.address).or('outputsList.[].address').equals(this.address).toArray()
+            // db.txn.where('inputsList.[].address').equals(this.address).or('outputsList.[].address').equals(this.address).toArray(),
+            // db.mempool.where('inputsList.[].address').equals(this.address).or('outputsList.[].address').equals(this.address).toArray()
         ]);
     }
 
-    save() {
-        return db.transaction('rw', db.address, db.txn, db.mempool, async () => {
+    // save() {
+    //     return db.transaction('rw', db.address, db.txn, db.mempool, async () => {
 
-            // Add or update our selves. If add, record this.id.
-            await db.address.put(this);
+    //         // Add or update our selves. If add, record this.id.
+    //         await db.address.put(this);
 
-            // Save all navigation properties (arrays of emails and phones)
-            // Some may be new and some may be updates of existing objects.
-            // put() will handle both cases.
-            // (record the result keys from the put() operations into emailIds and phoneIds
-            //  so that we can find local deletes)
-            let [confirmedHashes, mempooldHashes] = await Promise.all([
-                Promise.all(this.txn.map(tx => db.txn.put(tx))),
-                Promise.all(this.mempool.map(tx => db.mempool.put(tx)))
-            ]);
+    //         // Save all navigation properties (arrays of emails and phones)
+    //         // Some may be new and some may be updates of existing objects.
+    //         // put() will handle both cases.
+    //         // (record the result keys from the put() operations into emailIds and phoneIds
+    //         //  so that we can find local deletes)
+    //         let [confirmedHashes, mempooldHashes] = await Promise.all([
+    //             Promise.all(this.txn.map(tx => db.txn.put(tx))),
+    //             Promise.all(this.mempool.map(tx => db.mempool.put(tx)))
+    //         ]);
 
-        });
-    }
+    //     });
+    // }
 }
 
 
@@ -252,4 +252,3 @@ export interface ITransactionOutput {
 
 };
 
-export var db = new CashedDB;

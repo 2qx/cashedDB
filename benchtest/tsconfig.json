@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "module": "es6",
+        "target": "es5",
+        "lib": ["es2017",
+            "webworker",
+            "dom", 
+            "scripthost",
+            "ES6"], 
+        "noImplicitAny": true,
+        "removeComments": false,
+        "sourceMap": true,
+        "outDir": "out/ts",
+        "moduleResolution": "node"
+    },
+    "files": [
+        "node_modules/typescript/lib/lib.es6.d.ts",
+        "src/console.ts",
+        "src/app.ts"
+    ]
+}

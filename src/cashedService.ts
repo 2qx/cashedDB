@@ -1,5 +1,8 @@
-import { db, CashedDB, Block } from "../index";
-import { GrpcClient } from "../../grpc-bchrpc-browser";
+import { Block } from "./db";
+import CashedDB from "./db"
+
+// TODO remove this?
+import GrpcClient  from "../../grpc-bchrpc-browser";
 import { checkpoints } from "./Config"
 
 export class CashedService {
@@ -12,17 +15,6 @@ export class CashedService {
         this.client = client
         this.db = db
     }
-
-    // private utilGroupBy = (items, key) => items.reduce(
-    //     (result, item) => ({
-    //       ...result,
-    //       [item[key]]: [
-    //         ...(result[item[key]] || []),
-    //         item,
-    //       ],
-    //     }), 
-    //     {},
-    //   );
 
     // initially populates a database
     public async bootstrap() {
@@ -40,9 +32,9 @@ export class CashedService {
 
     // bulkPut an array of blocks and return the current local tip in the same transaction
     public async bulkPutBlocksAsTransaction(blocks: Block[]) {
-        return db.transaction("rw", db.block, () => {
+        return this.db.transaction("rw", this.db.block, () => {
             console.log("Putting "+ blocks.length  +" blocks in db in bulk")
-            return db.block.bulkPut(blocks);
+            return this.db.block.bulkPut(blocks);
         }).then((n) => {
             return this.db.block.orderBy('height').reverse().first();
         }).then((block) => {
@@ -72,6 +64,9 @@ export class CashedService {
 
     }
 
+    public async subscribe() {
+
+    }
     public async reorg() {
 
     }
