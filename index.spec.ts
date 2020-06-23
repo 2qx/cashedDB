@@ -3,7 +3,7 @@ import {
     db,
     CashedService,
     Address,
-    Txn,
+    ConfirmedTransaction,
     Block
 } from "./index";
 import { Dexie } from 'dexie';
@@ -124,13 +124,13 @@ describe("cashedDB", () => {
     it("getAddressTransactions and store in transaction collection", async () => {
         const exampleAddress = "bitcoincash:qregyd3kcklc58fd6r8epfwulpvd9f4mr5gxg8n8y7";
         const res = await mainnet.getAddressTransactions({ address: exampleAddress, nbFetch: 10 }, null);
-        const confirmedTransactions = res.getConfirmedTransactionsList()?.map(x => (x.toObject() as unknown) as Txn)
+        const confirmedTransactions = res.getConfirmedTransactionsList()?.map(x => x.toObject() as ConfirmedTransaction)
         
-        let txn = await global.casheddb.transaction("rw", global.casheddb.confirmed, (): Promise<void> => {
+        let txn = await global.casheddb.transaction("rw", global.casheddb.txn, (): Promise<void> => {
             console.log("Putting " + confirmedTransactions.length + " transactions in db in bulk")
-            return global.casheddb.confirmed.bulkPut(confirmedTransactions);
+            return global.casheddb.txn.bulkPut(confirmedTransactions);
         }).then((n: any) => {
-            return global.casheddb.confirmed.get({ 'hash': "RKN3uztX5ie2bEAwffWRUjDXB3N5J3coX0LIam2QSFI=" });
+            return global.casheddb.txn.get({ 'hash': "RKN3uztX5ie2bEAwffWRUjDXB3N5J3coX0LIam2QSFI=" });
         });
         console.log(txn.blockHash)
         assert.equal(txn?.lockTime, 609291, "check the lockTime of the stored transaction");
@@ -142,4 +142,27 @@ describe("cashedDB", () => {
         assert.equal(txn?.outputsList.length, 1, "check the output length of the stored transaction");
     });
 
+    // it("getAddressTransactions and store in transaction collection", async () => {
+    //     const exampleAddress = "bitcoincash:qregyd3kcklc58fd6r8epfwulpvd9f4mr5gxg8n8y7";
+    //     const res = await mainnet.getAddressTransactions({ address: exampleAddress, nbFetch: 10 }, null);
+    //     const confirmedTransactions = res.getConfirmedTransactionsList()?.map(x => x.toObject() as ConfirmedTransaction)
+        
+    //     let txn = await global.casheddb.transaction("rw", global.casheddb.txn, (): Promise<void> => {
+    //         console.log("Putting " + confirmedTransactions.length + " transactions in db in bulk")
+    //         return global.casheddb.txn.bulkPut(confirmedTransactions);
+    //     }).then((n: any) => {
+    //         return global.casheddb.txn.get({ 'hash': "RKN3uztX5ie2bEAwffWRUjDXB3N5J3coX0LIam2QSFI=" });
+    //     });
+    //     console.log(txn.blockHash)
+    //     assert.equal(txn?.lockTime, 609291, "check the lockTime of the stored transaction");
+    //     assert.equal(txn?.version, 1, "check the version of the stored transaction");
+    //     assert.equal(txn?.hash, "RKN3uztX5ie2bEAwffWRUjDXB3N5J3coX0LIam2QSFI=", "check the hash of the stored transaction");
+    //     assert.equal(txn?.inputsList.length, 3, "check the input length of the stored transaction");
+    //     assert.equal(txn?.inputsList[0].outpoint.hash, "c95MzcxXLV8foxajfMpeYerA22uvEbbxXJ8D7gvI95Y=", "check the hash of the first input outpoint");
+    //     assert.equal(txn?.inputsList[0].outpoint.index, 4, "check the index of the first input outpoint");
+    //     assert.equal(txn?.outputsList.length, 1, "check the output length of the stored transaction");
+    // });
+
+
+    
 });

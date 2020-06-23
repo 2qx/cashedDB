@@ -11,8 +11,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "grpc-bchrpc-browser": "file:../grpc-bchrpc-browser/",
-    "dexie": "^3.0.0-rc.2"
+    "dexie": "^3.0.0-rc.2",
+    "grpc-bchrpc-browser": "0.0.4"
   },
   "devDependencies": {
     "@types/chai": "^4.2.11",

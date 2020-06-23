@@ -5,7 +5,8 @@ var db_1 = require("./src/db");
 exports.db = db_1.db;
 exports.CashedDB = db_1.CashedDB;
 exports.Block = db_1.Block;
-exports.Txn = db_1.Txn;
+exports.ConfirmedTransaction = db_1.ConfirmedTransaction;
+exports.MempoolTransaction = db_1.MempoolTransaction;
 exports.Address = db_1.Address;
 var cashedService_1 = require("./src/cashedService");
 exports.CashedService = cashedService_1.CashedService;
@@ -120,11 +121,31 @@ describe("cashedDB", () => {
         const exampleAddress = "bitcoincash:qregyd3kcklc58fd6r8epfwulpvd9f4mr5gxg8n8y7";
         const res = yield mainnet.getAddressTransactions({ address: exampleAddress, nbFetch: 10 }, null);
         const confirmedTransactions = (_a = res.getConfirmedTransactionsList()) === null || _a === void 0 ? void 0 : _a.map(x => x.toObject());
-        let txn = yield global.casheddb.transaction("rw", global.casheddb.confirmed, () => {
+        let txn = yield global.casheddb.transaction("rw", global.casheddb.txn, () => {
             console.log("Putting " + confirmedTransactions.length + " transactions in db in bulk");
-            return global.casheddb.confirmed.bulkPut(confirmedTransactions);
+            return global.casheddb.txn.bulkPut(confirmedTransactions);
         }).then((n) => {
-            return global.casheddb.confirmed.get({ 'hash': "RKN3uztX5ie2bEAwffWRUjDXB3N5J3coX0LIam2QSFI=" });
+            return global.casheddb.txn.get({ 'hash': "RKN3uztX5ie2bEAwffWRUjDXB3N5J3coX0LIam2QSFI=" });
+        });
+        console.log(txn.blockHash);
+        chai_1.assert.equal(txn === null || txn === void 0 ? void 0 : txn.lockTime, 609291, "check the lockTime of the stored transaction");
+        chai_1.assert.equal(txn === null || txn === void 0 ? void 0 : txn.version, 1, "check the version of the stored transaction");
+        chai_1.assert.equal(txn === null || txn === void 0 ? void 0 : txn.hash, "RKN3uztX5ie2bEAwffWRUjDXB3N5J3coX0LIam2QSFI=", "check the hash of the stored transaction");
+        chai_1.assert.equal(txn === null || txn === void 0 ? void 0 : txn.inputsList.length, 3, "check the input length of the stored transaction");
+        chai_1.assert.equal(txn === null || txn === void 0 ? void 0 : txn.inputsList[0].outpoint.hash, "c95MzcxXLV8foxajfMpeYerA22uvEbbxXJ8D7gvI95Y=", "check the hash of the first input outpoint");
+        chai_1.assert.equal(txn === null || txn === void 0 ? void 0 : txn.inputsList[0].outpoint.index, 4, "check the index of the first input outpoint");
+        chai_1.assert.equal(txn === null || txn === void 0 ? void 0 : txn.outputsList.length, 1, "check the output length of the stored transaction");
+    }));
+    it("getAddressTransactions and store in transaction collection", () => __awaiter(void 0, void 0, void 0, function* () {
+        var _b;
+        const exampleAddress = "bitcoincash:qregyd3kcklc58fd6r8epfwulpvd9f4mr5gxg8n8y7";
+        const res = yield mainnet.getAddressTransactions({ address: exampleAddress, nbFetch: 10 }, null);
+        const confirmedTransactions = (_b = res.getConfirmedTransactionsList()) === null || _b === void 0 ? void 0 : _b.map(x => x.toObject());
+        let txn = yield global.casheddb.transaction("rw", global.casheddb.txn, () => {
+            console.log("Putting " + confirmedTransactions.length + " transactions in db in bulk");
+            return global.casheddb.txn.bulkPut(confirmedTransactions);
+        }).then((n) => {
+            return global.casheddb.txn.get({ 'hash': "RKN3uztX5ie2bEAwffWRUjDXB3N5J3coX0LIam2QSFI=" });
         });
         console.log(txn.blockHash);
         chai_1.assert.equal(txn === null || txn === void 0 ? void 0 : txn.lockTime, 609291, "check the lockTime of the stored transaction");
@@ -17884,8 +17905,8 @@ class CashedDB extends dexie_1.default {
         //
         db.version(1).stores({
             block: 'height, &hash, previousBlock',
-            confirmed: '&hash, blockHeight, blockHash',
-            unconfirmed: '&hash, blockHeight, blockHash',
+            txn: '&hash, blockHeight, blockHash',
+            mempool: '&hash, blockHeight, blockHash',
             address: '&address',
         });
         // Let's physically map Address class to address table.
@@ -17893,11 +17914,90 @@ class CashedDB extends dexie_1.default {
         // directly on retrieved database objects.
         db.address.mapToClass(Address);
         db.block.mapToClass(Block);
-        db.confirmed.mapToClass(Txn);
-        db.unconfirmed.mapToClass(Txn);
+        db.txn.mapToClass(ConfirmedTransaction);
+        db.mempool.mapToClass(MempoolTransaction);
     }
 }
 exports.CashedDB = CashedDB;
+/* This is a 'physical' class that is mapped to
+    * the address table. We can have methods on it that
+    * we could call on retrieved database objects.
+    */
+class Address {
+    constructor(address) {
+        this.address = address;
+        this.balance = 0;
+        this.txn = [];
+        this.mempool = [];
+        // Define navigation properties.
+        // Making them non-enumerable will prevent them from being handled by indexedDB
+        // when doing put() or add().
+        Object.defineProperties(this, {
+            txn: { value: [], enumerable: false, writable: true },
+            mempool: { value: [], enumerable: false, writable: true }
+        });
+    }
+    loadNavigationProperties() {
+        return __awaiter(this, void 0, void 0, function* () {
+            [this.txn, this.mempool] = yield Promise.all([
+                exports.db.txn.where('inputsList.[].address').equals(this.address).or('outputsList.[].address').equals(this.address).toArray(),
+                exports.db.mempool.where('inputsList.[].address').equals(this.address).or('outputsList.[].address').equals(this.address).toArray()
+            ]);
+        });
+    }
+    save() {
+        return exports.db.transaction('rw', exports.db.address, exports.db.txn, exports.db.mempool, () => __awaiter(this, void 0, void 0, function* () {
+            // Add or update our selves. If add, record this.id.
+            yield exports.db.address.put(this);
+            // Save all navigation properties (arrays of emails and phones)
+            // Some may be new and some may be updates of existing objects.
+            // put() will handle both cases.
+            // (record the result keys from the put() operations into emailIds and phoneIds
+            //  so that we can find local deletes)
+            let [confirmedHashes, mempooldHashes] = yield Promise.all([
+                Promise.all(this.txn.map(tx => exports.db.txn.put(tx))),
+                Promise.all(this.mempool.map(tx => exports.db.mempool.put(tx)))
+            ]);
+        }));
+    }
+}
+exports.Address = Address;
+/* Just for code completion and compilation - defines
+    * the interface of objects stored in the transaction tables.
+    */
+class BaseTransaction {
+    constructor(hash, version, timestamp, size, inputsList, outputsList, lockTime, computedHash) {
+        this.hash = hash;
+        this.version = version;
+        this.timestamp = timestamp;
+        this.size = size;
+        this.inputsList = inputsList;
+        this.outputsList = outputsList;
+        this.lockTime = lockTime;
+    }
+}
+exports.BaseTransaction = BaseTransaction;
+class ConfirmedTransaction extends BaseTransaction {
+    constructor(hash, blockHeight, blockHash, version, timestamp, size, inputsList, outputsList, lockTime, computedHash) {
+        super(hash, version, timestamp, size, inputsList, outputsList, lockTime);
+        this.blockHeight = blockHeight;
+        this.blockHash = blockHash;
+    }
+}
+exports.ConfirmedTransaction = ConfirmedTransaction;
+class MempoolTransaction {
+    constructor(transaction, addedTime, addedHeight, fee, feePerKb, startingPriority) {
+        this.transaction = transaction;
+        this.addedTime = addedTime;
+        this.addedHeight = addedHeight;
+        this.fee = fee;
+        this.feePerKb = feePerKb;
+        this.startingPriority = startingPriority;
+    }
+}
+exports.MempoolTransaction = MempoolTransaction;
+;
+;
 /* Just for code completion and compilation - defines
     * the interface of objects stored in the block table.
     */
@@ -17915,68 +18015,6 @@ class Block {
 }
 exports.Block = Block;
 ;
-/* Just for code completion and compilation - defines
-    * the interface of objects stored in the transaction tables.
-    */
-class Txn {
-    constructor(hash, blockHeight, blockHash, version, timestamp, size, inputsList, outputsList, lockTime, computedHash) {
-        this.hash = hash;
-        this.blockHeight = blockHeight;
-        this.blockHash = blockHash;
-        this.version = version;
-        this.timestamp = timestamp;
-        this.size = size;
-        this.inputsList = inputsList;
-        this.outputsList = outputsList;
-        this.lockTime = lockTime;
-    }
-}
-exports.Txn = Txn;
-;
-;
-/* This is a 'physical' class that is mapped to
-    * the address table. We can have methods on it that
-    * we could call on retrieved database objects.
-    */
-class Address {
-    constructor(address) {
-        this.address = address;
-        this.balance = 0;
-        this.confirmed = [];
-        this.unconfirmed = [];
-        // Define navigation properties.
-        // Making them non-enumerable will prevent them from being handled by indexedDB
-        // when doing put() or add().
-        Object.defineProperties(this, {
-            confirmed: { value: [], enumerable: false, writable: true },
-            unconfirmed: { value: [], enumerable: false, writable: true }
-        });
-    }
-    loadNavigationProperties() {
-        return __awaiter(this, void 0, void 0, function* () {
-            [this.confirmed, this.unconfirmed] = yield Promise.all([
-                exports.db.confirmed.where('inputsList.[].address').equals(this.address).or('outputsList.[].address').equals(this.address).toArray(),
-                exports.db.unconfirmed.where('inputsList.[].address').equals(this.address).or('outputsList.[].address').equals(this.address).toArray()
-            ]);
-        });
-    }
-    save() {
-        return exports.db.transaction('rw', exports.db.address, exports.db.confirmed, exports.db.unconfirmed, () => __awaiter(this, void 0, void 0, function* () {
-            // Add or update our selves. If add, record this.id.
-            yield exports.db.address.put(this);
-            // Save all navigation properties (arrays of emails and phones)
-            // Some may be new and some may be updates of existing objects.
-            // put() will handle both cases.
-            // (record the result keys from the put() operations into emailIds and phoneIds
-            //  so that we can find local deletes)
-            let [confirmedHashes, unconfirmedHashes] = yield Promise.all([
-                Promise.all(this.confirmed.map(tx => exports.db.confirmed.put(tx))),
-                Promise.all(this.unconfirmed.map(tx => exports.db.unconfirmed.put(tx)))
-            ]);
-        }));
-    }
-}
-exports.Address = Address;
 exports.db = new CashedDB;
 
 },{"dexie":40}],51:[function(require,module,exports){

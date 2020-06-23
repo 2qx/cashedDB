@@ -4,9 +4,7 @@ An experimental client database for Bitcoin Cash.
 
 This database wrapper is indended for use with grpc-bchd clients.  
 
-~~It utilizes [rxdb](https://rxdb.info/) as a library for managing a backend database.  It is configured to use IndexedDB via pouchDB, or in-memory for testing under nodejs.~~
-
-**This repo is undergoing a significant refactor to change the IndexedDB adapter to [dexie](https://dexie.org) for simplicity, and since with the extent of mostly immutable data, the observables of rxdb would have limited usefulness.**
+It utilizes [dexie](https://dexie.org) as a wrapper for IndexedDB.
 
 ## Design
 
