@@ -1,17 +1,25 @@
 import { Block } from "./db";
 import CashedDB from "./db"
 
-// TODO remove this?
-import GrpcClient  from "../../grpc-bchrpc-browser";
-import { checkpoints } from "./Config"
+import { checkpoints } from "./Config";
+//import * as bchrpcModule from "grpc-bchrpc-browser"
+import * as bchrpc from "../../grpc-bchrpc-browser"
+
+declare var global: any;
+
+// if (!global.bchrpc) {
+//     let bchrpc = bchrpcModule
+// }
+
 
 export class CashedService {
 
     public db: CashedDB
-    public client: GrpcClient
+    private client: bchrpc.GrpcClient
     public useAdapter: any
+    private blockStream: any;
 
-    constructor({ db, client }: { db: CashedDB, client: GrpcClient }) {
+    constructor({ db, client }: { db: CashedDB, client: any }) {
         this.client = client
         this.db = db
     }
@@ -19,7 +27,7 @@ export class CashedService {
     // initially populates a database
     public async bootstrap() {
         let blockInfoPromises = checkpoints.map((p) => {
-            return this.client.getBlockInfo({ hash: this.client.utilHexToU8(p.hashHex!).reverse() }, null)
+            return this.client.getBlockInfo({ hash: bchrpc.hexToU8(p.hashHex!).reverse() })
         })
         return Promise.all(blockInfoPromises).then((blockInfos) => {
             let blocks = blockInfos.map(i => i.getInfo()!.toObject() as Block)
@@ -49,13 +57,13 @@ export class CashedService {
     // syncs a database, 
     public async sync() {
 
-        let bestBlockHeight = (await this.client.getBlockchainInfo({}, null)).getBestHeight()
+        let bestBlockHeight = (await this.client.getBlockchainInfo({})).getBestHeight()
         console.log("current network height: " + bestBlockHeight)
         let currentTip = (await this.getTip())
         let blockHeaderWatchdogLimit = 765; // 2038-01
         for (var watchdog = 0; bestBlockHeight > currentTip && watchdog < blockHeaderWatchdogLimit; watchdog++) {
             const locatorHashes = await this.getLocatorHashes(currentTip)
-            const res = await this.client.getHeaders({ blockLocatorHashes: locatorHashes }, null);
+            const res = await this.client.getHeaders({ blockLocatorHashes: locatorHashes });
             let blocks = (res.getHeadersList()).map(x => x.toObject() as Block)
             currentTip = (await this.bulkPutBlocksAsTransaction(blocks))
             console.log("  new chaintip " + currentTip)
@@ -65,8 +73,9 @@ export class CashedService {
     }
 
     public async subscribe() {
-
+        this.subscribeBlocks()
     }
+
     public async reorg() {
 
     }
@@ -108,6 +117,44 @@ export class CashedService {
 
     }
 
+
+    private async unsubscribeBlocks() {
+        console.log("Canceling block subscription... ")
+        await this.blockStream.cancel()
+        console.log("block subscription canceled")
+    }
+
+    private async subscribeBlocks() {
+        console.log("Subscribing to unconfirmed transactions... ")
+
+        this.blockStream = await this.client.subscribeBlocks({
+            includeSerializedBlock: false,
+            includeTxnData: false,
+            includeTxnHashes: false
+        })
+
+        this.blockStream.on('data', function (blockNotification:bchrpc.BlockNotification) {
+            console.log(blockNotification.getType())
+            console.log(blockNotification.getBlockCase())
+            const bInfo = blockNotification.getBlockInfo()
+            console.log(bInfo?.getVersion())
+            console.log(bInfo?.getPreviousBlock_asB64())
+            console.log(bInfo?.getMerkleRoot_asB64())
+            console.log(bInfo?.getTimestamp())
+            console.log(bInfo?.getBits())
+            console.log(bInfo?.getNonce())
+        });
+        this.blockStream.on('status', function (status:any) {
+            console.log(status)
+        });
+        this.blockStream.on('error', (err:any) => {
+            console.log(
+                'Error code: ' + err.code + ' "' + err.message + '"');
+        });
+        this.blockStream.on('end', function () {
+            console.log('stream end signal received');
+        });
+    }
 
 
     private getLocatorHashes(localTip: number): Promise<string[]> {

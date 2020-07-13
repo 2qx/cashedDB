@@ -1,5 +1,5 @@
 import './cashedDB.js';
-import './bchrpc.js';
+import './bchrpc.webworker.js';
 import { handlePing } from './ping.js'
 
 export default class Console {
@@ -21,7 +21,7 @@ onmessage = function (messageObject) {
             let pong = handlePing()
             postMessage(pong);
             
-            const mainnet = new GrpcClient(
+            const mainnet = new bchrpc.GrpcClient(
                 {
                     url: "https://bchd.sploit.cash",
                     testnet: false,
@@ -34,6 +34,8 @@ onmessage = function (messageObject) {
             service.bootstrap()
             postMessage('cashedDbWorker: getting recent headers');
             service.sync()
+            postMessage('cashedDbWorker: subscribing');
+            service.subscribe()
             break;
         case 'connect':
             postMessage('cashedDbWorker: The worker is already running');

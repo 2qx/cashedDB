@@ -8,13 +8,13 @@ It utilizes [dexie](https://dexie.org) as a wrapper for IndexedDB.
 
 ## Design
 
-Minimal information is stored to validate blocks and transactions.  Data are generally stored in the marshalled form provided by grpc-bchd-browser—so all hashes are little-endian base64 strings, while numeric data are stored as numbers. Both transactions and blocks have a numeric field to indicated whether the record has been validated by the client.
+Minimal information is stored to validate blocks and transactions.  Data are generally stored in the marshalled form provided by grpc-bchrpc-browser—so all hashes are little-endian base64 strings, while numeric data are stored as numbers. Both transactions and blocks have a numeric field to indicated whether the record has been validated by the client.
 
 
 ## Usage
 
 The following code gets the first 10 block headers, stores them in bulk, then gets the 5th block from the database
-
+    import { GrpcClient } from "../../grpc-bchrpc-browser";
     const locatorHashes = ["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="] // the first dummy hash
     const res = await mainnet.getHeaders(
         {

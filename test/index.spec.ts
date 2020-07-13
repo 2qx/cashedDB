@@ -7,21 +7,27 @@ import {
 } from "../src/index";
 import { default as CashedDB } from "../src/db";
 import { Dexie } from 'dexie';
-import { GrpcClient } from "grpc-bchrpc-browser";
+import { GrpcClient, BlockInfo } from "grpc-bchrpc-browser";
 
 // Security notice:
 // Below is a collection of tools to approximate core javascript libraries that were not in nodejs.
 //
 // These libraries are only used for testing and should not be exported in the final module.
 //
+// @ts-ignore
 import { XMLHttpRequest } from "xhr2";
 
-declare var global: any;
+
 /*
    If running within nodejs, import these substitutes for core libraries
 */
+declare var global: any;
 
-let db = new CashedDB
+if (typeof window === 'undefined') {
+    global.XMLHttpRequest = XMLHttpRequest;
+}
+
+
 
 const mainnet = new GrpcClient(
     {
@@ -32,11 +38,6 @@ const mainnet = new GrpcClient(
     }
 );
 
-declare var global: any;
-
-if (typeof window === 'undefined') {
-    global.XMLHttpRequest = XMLHttpRequest;
-}
 
 export function deleteDatabase(db: Dexie) {
     var Promise = Dexie.Promise;
@@ -53,24 +54,28 @@ export function deleteDatabase(db: Dexie) {
     });
 }
 
-function sleep(milliseconds: number) {
-    const date = Date.now();
-    let currentDate = null;
-    do {
-        currentDate = Date.now();
-    } while (currentDate - date < milliseconds);
-}
+// function sleep(milliseconds: number) {
+//     const date = Date.now();
+//     let currentDate = null;
+//     do {
+//         currentDate = Date.now();
+//     } while (currentDate - date < milliseconds);
+// }
 
 describe("cashedDB", () => {
+    
+    let db: CashedDB
+    if (typeof window === 'undefined') {
+        const indexedDB = require("fake-indexeddb");
+        const IDBKeyRange = require("fake-indexeddb/lib/FDBKeyRange");
+        db = new CashedDB({ indexedDB: indexedDB, IDBKeyRange: IDBKeyRange })
+    } else {
+        db = new CashedDB({})
+    }
 
-    before(async () => {
-        global.casheddb = db;
-    });
+    before(() => {
 
-    afterEach(async () => {
-        //await deleteDatabase(global.casheddb)
     })
-
 
     it("getHeaders and store in block collection", async () => {
         const locatorHashes = ["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="]
@@ -79,38 +84,38 @@ describe("cashedDB", () => {
                 blockLocatorHashes: locatorHashes,
                 stopHash: "6RXZpHjjrfMYbAfGGiIiixD9h980PJJ4LswFLAAAAAA="
             });
-        let blocks = res.getHeadersList().map(x => x.toObject() as Block);
-        let block5 = await db.transaction("rw", global.casheddb.block, (): Promise<void> => {
-            return Promise.resolve(global.casheddb.block.bulkPut(blocks));
-        }).then((): Promise<Block> => {
-            return global.casheddb.block.get({ "height": 5 })
-        }).then((block5) => {
+        let blocks = res.getHeadersList().map((x: BlockInfo) => x.toObject() as Block);
+        let block5 = await db.transaction("rw", db.block, (): Promise<number> => {
+            return Promise.resolve(db.block.bulkPut(blocks));
+        }).then((): Promise<Block|undefined> => {
+            return db.block.get({ "height": 5 })
+        }).then((block5?) => {
             return block5
         }).catch(function (error) {
             console.error(error);
             throw error;
         });
-        assert.equal(block5.hash, "/DP1lvgioKGVH/2/Kol7CVY2rYcXB79dMWJymwAAAAA=", "check hash of block the 5th is stored");
-        assert.equal(block5.height, 5, "check height of block the 5th is stored");
-        assert.equal(block5.version, 1, "check version of block the 5th is stored");
-        assert.equal(block5.previousBlock, "hRRKhEiOqI0iHIvWwFnaCQ6I+KLJlpDuVdu6TgAAAAA=", "check previous hash of block the 5th is stored");
-        assert.equal(block5.merkleRoot, "4RxI/s3Z5yUQyoTwIzcMmji/kaxcrogBm+6U0kUoUmM=", "check merkleRoot of block the 5th is stored");
-        assert.equal(block5.timestamp, 1231471428, "check timestamp of block the 5th is stored");
-        assert.equal(block5.bits, 486604799, "check bits of block the 5th is stored");
-        assert.equal(block5.nonce, 2011431709, "check nonce of block the 5th is stored");
+        assert.equal(block5?.hash, "/DP1lvgioKGVH/2/Kol7CVY2rYcXB79dMWJymwAAAAA=", "check hash of block the 5th is stored");
+        assert.equal(block5?.height, 5, "check height of block the 5th is stored");
+        assert.equal(block5?.version, 1, "check version of block the 5th is stored");
+        assert.equal(block5?.previousBlock, "hRRKhEiOqI0iHIvWwFnaCQ6I+KLJlpDuVdu6TgAAAAA=", "check previous hash of block the 5th is stored");
+        assert.equal(block5?.merkleRoot, "4RxI/s3Z5yUQyoTwIzcMmji/kaxcrogBm+6U0kUoUmM=", "check merkleRoot of block the 5th is stored");
+        assert.equal(block5?.timestamp, 1231471428, "check timestamp of block the 5th is stored");
+        assert.equal(block5?.bits, 486604799, "check bits of block the 5th is stored");
+        assert.equal(block5?.nonce, 2011431709, "check nonce of block the 5th is stored");
 
 
     });
 
 
     it("getTip should get the current best block height", async () => {
-        let service = new CashedService({ db: global.casheddb, client: mainnet })
+        let service = new CashedService({ db: db, client: mainnet })
         let tip = await service.bootstrap()
         assert.equal(tip, 635259, "assure the starting height is 635259")
     });
 
     it("sync should download all headers", async () => {
-        let service = new CashedService({ db: global.casheddb, client: mainnet })
+        let service = new CashedService({ db: db, client: mainnet })
         let isSynced = new Promise(resolve => setTimeout(resolve, 1000)).then(() => {
             return service.bootstrap()
         }).then((tip) => {
@@ -125,14 +130,14 @@ describe("cashedDB", () => {
         const exampleAddress = "bitcoincash:qregyd3kcklc58fd6r8epfwulpvd9f4mr5gxg8n8y7";
         const res = await mainnet.getAddressTransactions({ address: exampleAddress, nbFetch: 10 });
         const confirmedTransactions = res.getConfirmedTransactionsList()?.map(x => x.toObject() as ConfirmedTransaction)
-        
-        let txn = await global.casheddb.transaction("rw", global.casheddb.txn, (): Promise<void> => {
+
+        let txn = await db.transaction("rw", db.txn, (): Promise<number> => {
             console.log("Putting " + confirmedTransactions.length + " transactions in db in bulk")
-            return global.casheddb.txn.bulkPut(confirmedTransactions);
+            return db.txn.bulkPut(confirmedTransactions);
         }).then((n: any) => {
-            return global.casheddb.txn.get({ 'hash': "RKN3uztX5ie2bEAwffWRUjDXB3N5J3coX0LIam2QSFI=" });
+            return db.txn.get({ 'hash': "RKN3uztX5ie2bEAwffWRUjDXB3N5J3coX0LIam2QSFI=" });
         });
-        console.log(txn.blockHash)
+        console.log(txn?.blockHash)
         assert.equal(txn?.lockTime, 609291, "check the lockTime of the stored transaction");
         assert.equal(txn?.version, 1, "check the version of the stored transaction");
         assert.equal(txn?.hash, "RKN3uztX5ie2bEAwffWRUjDXB3N5J3coX0LIam2QSFI=", "check the hash of the stored transaction");
@@ -146,12 +151,12 @@ describe("cashedDB", () => {
     //     const exampleAddress = "bitcoincash:qregyd3kcklc58fd6r8epfwulpvd9f4mr5gxg8n8y7";
     //     const res = await mainnet.getAddressTransactions({ address: exampleAddress, nbFetch: 10 }, null);
     //     const confirmedTransactions = res.getConfirmedTransactionsList()?.map(x => x.toObject() as ConfirmedTransaction)
-        
-    //     let txn = await global.casheddb.transaction("rw", global.casheddb.txn, (): Promise<void> => {
+
+    //     let txn = await db.transaction("rw", db.txn, (): Promise<void> => {
     //         console.log("Putting " + confirmedTransactions.length + " transactions in db in bulk")
-    //         return global.casheddb.txn.bulkPut(confirmedTransactions);
+    //         return db.txn.bulkPut(confirmedTransactions);
     //     }).then((n: any) => {
-    //         return global.casheddb.txn.get({ 'hash': "RKN3uztX5ie2bEAwffWRUjDXB3N5J3coX0LIam2QSFI=" });
+    //         return db.txn.get({ 'hash': "RKN3uztX5ie2bEAwffWRUjDXB3N5J3coX0LIam2QSFI=" });
     //     });
     //     console.log(txn.blockHash)
     //     assert.equal(txn?.lockTime, 609291, "check the lockTime of the stored transaction");
@@ -164,5 +169,5 @@ describe("cashedDB", () => {
     // });
 
 
-    
+
 });

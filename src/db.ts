@@ -1,5 +1,5 @@
 import Dexie from 'dexie';
-
+import { DexieOptions } from 'dexie';
 /*
 *    The general layout is 
 *
@@ -19,9 +19,9 @@ export default class CashedDB extends Dexie {
     mempool!: Dexie.Table<MempoolTransaction, number>;
     address!: Dexie.Table<Address, number>;
 
-    constructor() {
+    constructor(args: DexieOptions) {
 
-        super("cashedDB");
+        super("cashedDB", args);
 
         var db = this;
 

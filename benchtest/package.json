@@ -1,13 +1,13 @@
 {
   "name": "cashedDB-workbench",
   "version": "1.0.0",
-  "description": "Sample on how to use CashedDbService with a Web Worker",
+  "description": "Sample using CashedDbService with a Web Worker",
   "scripts": {
     "build": "npm run build:ts && npm run build:rollup",
     "build:ts": "node node_modules/typescript/bin/tsc",
     "build:rollup": "node node_modules/rollup/bin/rollup -c",
     "clean": "rm -rf out",
-    "test": "http-server .src/ -a localhost -p 8081"
+    "test": "http-server ./src/ -a localhost -p 8081"
   },
   "repository": {
     "type": "git",

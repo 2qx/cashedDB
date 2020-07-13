@@ -63,7 +63,7 @@
     },
     "include": [
       "src/**/*.ts",
-      "xhr2.d.ts", "test/index.spec.ts"
+      "index.spec.ts"
     ],
     "exclude": [
       "node_modules",

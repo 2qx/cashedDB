@@ -2,25 +2,28 @@
     "name": "cashedDB",
     "version": "1.0.0",
     "description": "",
-    "main": "index.js",
+    "main": "dist/cashedDB.js",
     "scripts": {
-        "test": "nyc mocha --timeout=3000 '*.spec.js'",
-        "build": "npx webpack --mode=none && cp dist/cashedDB.js benchtest/out/ && cp dist/cashedDB.js test/",
-        "test:browser": "live-server --port=9000 test/",
+        "test": "mocha",
+        "build": "npx webpack --mode=none --config=./webpack.worker.js && cp dist/cashedDB.js benchtest/out/ && cp dist/cashedDB.js test/",
+        "test:browser": "npx webpack --mode=none --config=./webpack.test.js && live-server --port=9000 test/",
         "test:bench": "live-server --port=9000 benchtest/out/"
     },
     "author": "",
     "license": "ISC",
     "dependencies": {
         "dexie": "^3.0.0-rc.2",
-        "grpc-bchrpc-browser": "0.0.4"
+        "grpc-bchrpc-browser": "file:../grpc-bchrpc-browser"
     },
     "devDependencies": {
         "@types/chai": "^4.2.11",
         "@types/mocha": "^7.0.2",
+        "@types/node": "^14.0.22",
         "chai": "^4.2.0",
+        "fake-indexeddb": "^3.1.0",
         "live-server": "^1.2.1",
         "mocha": "^7.2.0",
+        "source-map-support": "^0.5.19",
         "ts-loader": "^7.0.5",
         "typescript": "^3.9.5",
         "webpack": "^4.43.0",
