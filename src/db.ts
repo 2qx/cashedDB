@@ -10,6 +10,8 @@ import { DexieOptions } from 'dexie';
 *        BlockHash    
 *
 *    Block
+*
+*    Node
 */
 
 export default class CashedDB extends Dexie {
@@ -19,7 +21,7 @@ export default class CashedDB extends Dexie {
     mempool!: Dexie.Table<MempoolTransaction, number>;
     address!: Dexie.Table<Address, number>;
 
-    constructor(args: DexieOptions) {
+    constructor(args?: DexieOptions) {
 
         super("cashedDB", args);
 
@@ -34,6 +36,7 @@ export default class CashedDB extends Dexie {
             txn: '&hash, blockHeight, blockHash',
             mempool: '&hash, blockHeight, blockHash',
             address: '&address',
+            node: '&url'
         });
 
         // Let's physically map Address class to address table.
@@ -50,8 +53,9 @@ export default class CashedDB extends Dexie {
     * the address table. We can have methods on it that
     * we could call on retrieved database objects.
     */
-   export class Address {
+export class Address {
 
+    db: any
     address: string;
     balance: number;
     txn: ConfirmedTransaction[];
@@ -72,37 +76,40 @@ export default class CashedDB extends Dexie {
     }
 
     async loadNavigationProperties() {
-        [this.txn, this.mempool] = await Promise.all([
-            // db.txn.where('inputsList.[].address').equals(this.address).or('outputsList.[].address').equals(this.address).toArray(),
-            // db.mempool.where('inputsList.[].address').equals(this.address).or('outputsList.[].address').equals(this.address).toArray()
-        ]);
+        await Promise.all([
+            db.txn.where('inputsList.[].address').equals(this.address).or('outputsList.[].address').equals(this.address).toArray(),
+            db.mempool.where('inputsList.[].address').equals(this.address).or('outputsList.[].address').equals(this.address).toArray()
+        ]).catch((error) => {
+            console.log("Error: " + error);
+        });
     }
 
-    // save() {
-    //     return db.transaction('rw', db.address, db.txn, db.mempool, async () => {
+    save() {
+        return db.transaction('rw', db.address, db.txn, db.mempool, async () => {
 
-    //         // Add or update our selves. If add, record this.id.
-    //         await db.address.put(this);
+            // Add or update our selves. If add, record this.id.
+            await db.address.put(this);
 
-    //         // Save all navigation properties (arrays of emails and phones)
-    //         // Some may be new and some may be updates of existing objects.
-    //         // put() will handle both cases.
-    //         // (record the result keys from the put() operations into emailIds and phoneIds
-    //         //  so that we can find local deletes)
-    //         let [confirmedHashes, mempooldHashes] = await Promise.all([
-    //             Promise.all(this.txn.map(tx => db.txn.put(tx))),
-    //             Promise.all(this.mempool.map(tx => db.mempool.put(tx)))
-    //         ]);
-
-    //     });
-    // }
+            // Save all navigation properties (arrays of confirmed and mempool)
+            // Some may be new and some may be updates of existing objects.
+            // put() will handle both cases.
+            // (record the result keys from the put() operations into emailIds and phoneIds
+            //  so that we can find local deletes)
+            await Promise.all([
+                Promise.all(this.txn.map(tx => db.txn.put(tx))),
+                Promise.all(this.mempool.map(tx => db.mempool.put(tx)))
+            ]).catch((error) => {
+                console.log("Error: " + error);
+            });
+        });
+    }
 }
 
 
 /* Just for code completion and compilation - defines
-    * the interface of objects stored in the transaction tables.
-    */
-   export class BaseTransaction {
+ * the interface of objects stored in the transaction tables.
+ */
+export class BaseTransaction {
     hash: string;
     version: number;
     timestamp: number;
@@ -216,7 +223,7 @@ export interface ITransactionOutput {
 /* Just for code completion and compilation - defines
     * the interface of objects stored in the block table.
     */
-   export class Block {
+export class Block {
 
     height: number;
     hash: string;
@@ -252,3 +259,35 @@ export interface ITransactionOutput {
 
 };
 
+export class Node {
+    url: string;
+    bitcoinNet: string
+    bestHeight: number
+    bestBlockHash: string
+    difficulty: number;
+    medianTime: number;
+    txIndex: boolean;
+    addrIndex: boolean;
+
+    constructor(
+        url: string,
+        bitcoinNet: string,
+        bestHeight: number,
+        bestBlockHash: string,
+        difficulty: number,
+        medianTime: number,
+        txIndex: boolean,
+        addrIndex: boolean,
+    ) {
+        this.url = url
+        this.bitcoinNet = bitcoinNet
+        this.bestHeight = bestHeight
+        this.bestBlockHash = bestBlockHash
+        this.difficulty = difficulty
+        this.medianTime = medianTime
+        this.txIndex = txIndex
+        this.addrIndex = addrIndex
+    }
+}
+
+export var db = new CashedDB();

@@ -5,4 +5,4 @@ export {
     MempoolTransaction,
     Address
 } from "./db";
-export { CashedService } from "./cashedService";
+export { CashedService } from "./service";

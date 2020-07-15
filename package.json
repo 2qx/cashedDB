@@ -2,7 +2,8 @@
     "name": "cashedDB",
     "version": "1.0.0",
     "description": "",
-    "main": "dist/cashedDB.js",
+    "main": "index.ts",
+    "types": "index.d.ts",
     "scripts": {
         "test": "mocha",
         "build": "npx webpack --mode=none --config=./webpack.worker.js && cp dist/cashedDB.js benchtest/out/ && cp dist/cashedDB.js test/",
@@ -22,7 +23,6 @@
         "chai": "^4.2.0",
         "fake-indexeddb": "^3.1.0",
         "live-server": "^1.2.1",
-        "mocha": "^7.2.0",
         "source-map-support": "^0.5.19",
         "ts-loader": "^7.0.5",
         "typescript": "^3.9.5",

@@ -1,15 +1,11 @@
 import { Block } from "./db";
 import CashedDB from "./db"
 
-import { checkpoints } from "./Config";
+import { checkpoints } from "./config";
 //import * as bchrpcModule from "grpc-bchrpc-browser"
 import * as bchrpc from "../../grpc-bchrpc-browser"
 
 declare var global: any;
-
-// if (!global.bchrpc) {
-//     let bchrpc = bchrpcModule
-// }
 
 
 export class CashedService {
@@ -34,6 +30,8 @@ export class CashedService {
             return blocks
         }).then((blocks) => {
             return this.bulkPutBlocksAsTransaction(blocks)
+        }).catch((error) => {
+            throw error
         })
 
     }
@@ -51,6 +49,8 @@ export class CashedService {
             } else {
                 throw new Error("no block returned during bootstrap");
             }
+        }).catch((error) => {
+            throw error
         });
     }
 
@@ -172,7 +172,7 @@ export class CashedService {
         } else {
             // This is the expected case where heights were built.
             let locatorHashPromises = (locatorHeights.map(h => (this.getHashFromHeight(h))))
-            return Promise.all(locatorHashPromises)
+            return Promise.all(locatorHashPromises).catch((error) => {throw error})
         }
 
     }
@@ -189,7 +189,7 @@ export class CashedService {
 
     public getTip(): Promise<number> {
         return this.db.block.orderBy('height').reverse().first().then((block?: Block) => {
-            return block ? block.height : Promise.resolve(0)
+            return block ? block.height : Promise.resolve(0).catch((error) => {throw error})
         })
 
     }

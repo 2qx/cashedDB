@@ -121,7 +121,10 @@ describe("cashedDB", () => {
         }).then((tip) => {
             console.log("sync tip :" + tip)
             return service.sync()
-        })
+        }).catch(function (error) {
+            console.error(error);
+            throw error;
+        });
         assert.isTrue((await isSynced), "assure sync returns true")
     });
 

@@ -14,6 +14,8 @@ Minimal information is stored to validate blocks and transactions.  Data are gen
 ## Usage
 
 The following code gets the first 10 block headers, stores them in bulk, then gets the 5th block from the database
+
+
     import { GrpcClient } from "../../grpc-bchrpc-browser";
     const locatorHashes = ["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="] // the first dummy hash
     const res = await mainnet.getHeaders(
